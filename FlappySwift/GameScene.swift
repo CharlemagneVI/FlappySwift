@@ -78,6 +78,7 @@ class GameScene: SKScene, StartButtonDelegate, RestartButtonDelegate, SKPhysicsC
         if let playerNode = self.childNode(withName: "Player") as? SKSpriteNode {
             playerNode.texture?.filteringMode = .nearest
             player = Player(node: playerNode)
+            player.setConstraints(width: size.width, height: size.height)
             player.changeSkin()
             entityManager.addExistingEntityToManager(player)
         }
@@ -136,6 +137,44 @@ class GameScene: SKScene, StartButtonDelegate, RestartButtonDelegate, SKPhysicsC
         self.lastUpdateTime = currentTime
     }
     
+    func killPlayer() {
+        scene?.run(SoundManager.sharedInstance.soundHit)
+        Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false, block: { _ in
+            self.scene?.run(SoundManager.sharedInstance.soundDie)
+        })
+        playing = false
+        entityManager.spawnOn = false
+        player.stopAnimation()
+        
+        //Stop all pipe movement actions
+        self.enumerateChildNodes(withName: "Pipe") {
+            (node, stop) in
+            
+            node.isPaused = true
+        }
+        //Stop the ground movement action
+        self.enumerateChildNodes(withName: "*Ground*") {
+            (node, stop) in
+            node.isPaused = true
+        }
+        //Stop the goal node movement actions
+        self.enumerateChildNodes(withName: "Goal") {
+            (node, stop) in
+            node.isPaused = true
+        }
+        
+        let fadeOutElements = SKAction.fadeOut(withDuration: 0.1)
+        let fadeInElements = SKAction.fadeIn(withDuration: 0.3)
+        
+        gameOverLabel.run(fadeInElements)
+        scoreLabel.run(fadeOutElements)
+        
+        if let showScoreCard = SKAction(named: "ShowScoreCard") {
+            scoreCard.updateScores(score: scoreLabel.score)
+            scoreCard.run(showScoreCard)
+        }
+    }
+    
     //MARK: StartButtonDelegate methods
     func startGame() {
         let fadeOutElements = SKAction.fadeOut(withDuration: 0.5)
@@ -170,46 +209,24 @@ class GameScene: SKScene, StartButtonDelegate, RestartButtonDelegate, SKPhysicsC
     
     //MARK: SKPhysicsContactDelegate methods
     func didBegin(_ contact: SKPhysicsContact) {
-        if contact.bodyA.node?.name == "Pipe" && contact.bodyB.node?.name == "Player" && playing {
-            //player hit something, kill them.
-            scene?.run(SoundManager.sharedInstance.soundHit)
-            Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false, block: { _ in
-                self.scene?.run(SoundManager.sharedInstance.soundDie)
-            })
-            playing = false
-            entityManager.spawnOn = false
-            player.stopAnimation()
-            
-            //Stop all pipe movement actions
-            self.enumerateChildNodes(withName: "Pipe") {
-                (node, stop) in
-                
-                node.isPaused = true
-            }
-            //Stop the ground movement action
-            self.enumerateChildNodes(withName: "*Ground*") {
-                (node, stop) in
-                node.isPaused = true
-            }
-            //Stop the goal node movement actions
-            self.enumerateChildNodes(withName: "Goal") {
-                (node, stop) in
-                node.isPaused = true
-            }
-            
-            let fadeOutElements = SKAction.fadeOut(withDuration: 0.1)
-            let fadeInElements = SKAction.fadeIn(withDuration: 0.3)
-            
-            gameOverLabel.run(fadeInElements)
-            scoreLabel.run(fadeOutElements)
-            
-            if let showScoreCard = SKAction(named: "ShowScoreCard") {
-                scoreCard.updateScores(score: scoreLabel.score)
-                scoreCard.run(showScoreCard)
-            }
+        
+        guard let nodeA = contact.bodyA.node else {
+            return
         }
         
-        if contact.bodyA.node?.name == "Goal" && contact.bodyB.node?.name == "Player" {
+        guard let nodeB = contact.bodyB.node else {
+            return
+        }
+        
+        if nodeA.name == "Pipe" && nodeB.name == "Player" && playing {
+            killPlayer()
+        }
+        
+        if nodeA.name!.contains("Ground") && nodeB.name == "Player" && playing {
+            killPlayer()
+        }
+        
+        if nodeA.name == "Goal" && nodeB.name == "Player" {
             scoreLabel.incrementScore()
             scene?.run(SoundManager.sharedInstance.soundPoint)
             contact.bodyA.node?.removeFromParent()

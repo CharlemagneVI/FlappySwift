@@ -16,7 +16,7 @@ class EntityManager {
     let scene: SKScene
     
     //Seconds each pipe spawns, and the delta between the last one spawned
-    private var pipeDelay: TimeInterval = 2.5
+    private var pipeDelay: TimeInterval = 1.8
     private var pipeDelayDelta: TimeInterval = 0
     
     //Use these for setting pipe locations and distance between the pipes

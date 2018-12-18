@@ -115,6 +115,17 @@ class Player: GKEntity {
         }
     }
     
+    //Constrains the player to the play area.
+    func setConstraints(width: CGFloat, height: CGFloat) {
+        guard let spriteComponent = component(ofType: SpriteComponent.self) else {
+            return
+        }
+        let xRange = SKRange(lowerLimit: -width / 2, upperLimit: width / 2)
+        let yRange = SKRange(lowerLimit: -height / 2, upperLimit: height / 2)
+        
+        spriteComponent.node.constraints = [SKConstraint.positionX(xRange, y: yRange)]
+    }
+    
     //Make the player flap
     func flap() {
         if let spriteComponent = component(ofType: SpriteComponent.self) {
